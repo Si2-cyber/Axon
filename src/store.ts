@@ -32,6 +32,7 @@ interface MapState {
   undo: () => void;
   redo: () => void;
   saveToHistory: () => void;
+  resetMap: () => void;
 }
 
 const initialTreeRoot: TreeNode = {
@@ -218,6 +219,20 @@ export const useMapStore = create<MapState>()(
             historyIndex: newIndex 
           });
         }
+      },
+
+      resetMap: () => {
+        const { document } = get();
+        if (document.typology !== DocumentTypology.MIND_MAP) return;
+
+        // Clone the root node and clear all its children
+        const newRoot = JSON.parse(JSON.stringify(document.rootNode));
+        newRoot.children = [];
+
+        // Regenerate layout constraints based on just the root node
+        const { nodes, edges } = generateCanvasLayout(newRoot);
+        set({ document: { ...document, rootNode: newRoot, nodes, edges } });
+        get().saveToHistory();
       },
     }),
     {

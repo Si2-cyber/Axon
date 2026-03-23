@@ -2,7 +2,7 @@ import { LayoutNode, TreeNode } from "../types";
 
 const NODE_WIDTH = 250;
 const NODE_HEIGHT = 120; // Increased to prevent rendering overlap
-const HORIZONTAL_SPACING = 300; // X space between depths
+const HORIZONTAL_SPACING = 150; // X space between depths (reduced by 50%)
 const NODE_GAP_Y = 24; // Y space between sibling nodes
 
 /**

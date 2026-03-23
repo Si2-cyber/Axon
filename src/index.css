@@ -24,6 +24,11 @@ html, body, #root {
 
 .react-flow__node {
   cursor: pointer;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 /* Custom scrollbar for properties panel */

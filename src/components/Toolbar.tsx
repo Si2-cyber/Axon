@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Network, 
   GitGraph, 
@@ -7,19 +8,23 @@ import {
   Redo2, 
   Download, 
   Palette,
-  Plus
+  Plus,
+  Home,
+  Trash2
 } from 'lucide-react';
 import { useMapStore } from '../store';
 import { DocumentTypology, THEMES } from '../types';
 
 const Toolbar = () => {
+  const navigate = useNavigate();
   const { 
     document, 
     undo, 
     redo, 
     setTheme,
     setNodes,
-    saveToHistory
+    saveToHistory,
+    resetMap
   } = useMapStore();
 
   const addNode = () => {
@@ -37,6 +42,12 @@ const Toolbar = () => {
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl">
       {/* UI based on immutable mode */}
       <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
+        <button onClick={() => navigate('/')} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600" title="Dashboard">
+          <Home size={20} />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
         <button onClick={undo} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600" title="Undo">
           <Undo2 size={20} />
         </button>
@@ -45,13 +56,18 @@ const Toolbar = () => {
         </button>
       </div>
 
-      {document.typology === DocumentTypology.FLOWCHART && (
-        <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
+      <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
+        {document.typology === DocumentTypology.MIND_MAP && (
+          <button onClick={resetMap} className="p-2 rounded-lg hover:bg-red-50 text-red-600" title="Clean All">
+            <Trash2 size={20} />
+          </button>
+        )}
+        {document.typology === DocumentTypology.FLOWCHART && (
           <button onClick={addNode} className="p-2 rounded-lg hover:bg-blue-50 text-blue-600" title="Add Node">
             <Plus size={20} />
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="flex items-center gap-1">
         <div className="relative group">
