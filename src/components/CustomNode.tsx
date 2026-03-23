@@ -2,25 +2,25 @@ import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { NodeData } from '../types';
 import { useMapStore } from '../store';
-import { FileText, CheckSquare, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
+import { FileText, CheckSquare, Link as LinkIcon, Image as ImageIcon, Plus } from 'lucide-react';
 
 const CustomNode = ({ id, data, selected }: NodeProps<NodeData>) => {
   const theme = useMapStore((state) => state.document.theme);
-  
+  const addChildNode = useMapStore((state) => state.addChildNode);
+  const deleteNode = useMapStore((state) => state.deleteNode);
+
   return (
-    <div 
-      className={`px-4 py-3 rounded-xl border-2 transition-all duration-200 shadow-sm
-        ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+    <div
+      className={`relative px-4 py-3 rounded-2xl border transition-all duration-200 shadow-md bg-white
+        ${selected ? 'ring-2 ring-blue-500 ring-offset-2 border-blue-500' : 'border-slate-200'}`}
       style={{ 
-        backgroundColor: theme.nodeColor,
-        borderColor: selected ? '#3b82f6' : theme.edgeColor,
-        color: theme.textColor,
-        minWidth: '180px'
+        backgroundColor: theme?.nodeColor || '#ffffff',
+        minWidth: '200px'
       }}
     >
-      <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-blue-400" />
-      
-      <div className="flex flex-col gap-2">
+      <Handle type="target" position={Position.Left} className="w-2 h-2 !bg-blue-400" />
+
+      <div className="flex flex-col gap-2 text-slate-800">
         <div className="font-semibold text-sm">{data.label}</div>
         
         {data.notes && (
@@ -36,14 +36,35 @@ const CustomNode = ({ id, data, selected }: NodeProps<NodeData>) => {
             {data.tasks.filter(t => t.completed).length}/{data.tasks.length}
           </div>
         )}
-
-        <div className="flex gap-2 mt-1">
-          {data.links && data.links.length > 0 && <LinkIcon size={12} className="opacity-50" />}
-          {data.media && <ImageIcon size={12} className="opacity-50" />}
-        </div>
+      </div>
+      
+      {/* Node Action Menu (Rendered inline to prevent bounds bleeding/ghosting) */}
+      <div className={`flex gap-2 mt-3 transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+         <button 
+           className="px-2 py-1 bg-blue-500 text-white rounded-md text-xs hover:bg-blue-600 shadow-sm flex items-center gap-1"
+           onClick={(e) => {
+             e.stopPropagation();
+             addChildNode(id);
+           }}
+           title="Add Child"
+         >
+           <Plus size={12} /> Add
+         </button>
+         {!data.isRoot && (
+           <button 
+             className="px-2 py-1 bg-red-50 text-red-600 rounded-md text-xs hover:bg-red-100 shadow-sm flex items-center gap-1 border border-red-200"
+             onClick={(e) => {
+               e.stopPropagation();
+               deleteNode(id);
+             }}
+             title="Delete Node"
+           >
+             Delete
+           </button>
+         )}
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-blue-400" />
+      <Handle type="source" position={Position.Right} className="w-2 h-2 !bg-blue-400" />
     </div>
   );
 };

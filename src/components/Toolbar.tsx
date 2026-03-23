@@ -15,12 +15,10 @@ import { DocumentTypology, THEMES } from '../types';
 const Toolbar = () => {
   const { 
     document, 
-    setTypology, 
     undo, 
     redo, 
     setTheme,
     setNodes,
-    setEdges,
     saveToHistory
   } = useMapStore();
 
@@ -37,30 +35,7 @@ const Toolbar = () => {
 
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl">
-      <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
-        <button 
-          onClick={() => setTypology(DocumentTypology.MIND_MAP)}
-          className={`p-2 rounded-lg transition-colors ${document.typology === DocumentTypology.MIND_MAP ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-600'}`}
-          title="Mind Map Mode"
-        >
-          <Network size={20} />
-        </button>
-        <button 
-          onClick={() => setTypology(DocumentTypology.FLOWCHART)}
-          className={`p-2 rounded-lg transition-colors ${document.typology === DocumentTypology.FLOWCHART ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-600'}`}
-          title="Flowchart Mode"
-        >
-          <GitGraph size={20} />
-        </button>
-        <button 
-          onClick={() => setTypology(DocumentTypology.ORG_CHART)}
-          className={`p-2 rounded-lg transition-colors ${document.typology === DocumentTypology.ORG_CHART ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-600'}`}
-          title="Org Chart Mode"
-        >
-          <Users size={20} />
-        </button>
-      </div>
-
+      {/* UI based on immutable mode */}
       <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
         <button onClick={undo} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600" title="Undo">
           <Undo2 size={20} />
@@ -70,11 +45,13 @@ const Toolbar = () => {
         </button>
       </div>
 
-      <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
-        <button onClick={addNode} className="p-2 rounded-lg hover:bg-blue-50 text-blue-600" title="Add Node">
-          <Plus size={20} />
-        </button>
-      </div>
+      {document.typology === DocumentTypology.FLOWCHART && (
+        <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
+          <button onClick={addNode} className="p-2 rounded-lg hover:bg-blue-50 text-blue-600" title="Add Node">
+            <Plus size={20} />
+          </button>
+        </div>
+      )}
 
       <div className="flex items-center gap-1">
         <div className="relative group">

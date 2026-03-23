@@ -38,15 +38,31 @@ export interface VisualBoundary {
   color: string;
 }
 
+export interface TreeNode {
+  id: string;
+  data: NodeData;
+  children: TreeNode[]; // The recursive nested element
+}
+
+// Additional properties strictly used by our Layout Engine internally
+export interface LayoutNode extends TreeNode {
+  children: LayoutNode[];
+  x?: number;
+  y?: number;
+  bboxHeight?: number; // Total vertical height of this node + all nested children
+}
+
 export interface MapDocument {
   id: string;
   name: string;
   typology: DocumentTypology;
-  nodes: Node<NodeData>[];
-  edges: Edge[];
+  rootNode: TreeNode; // The source of truth for the tree structure
+  nodes: Node<NodeData>[]; // Flattened nodes for ReactFlow
+  edges: Edge[]; // Flattened edges for ReactFlow
   theme: Theme;
   boundaries: VisualBoundary[];
 }
+
 
 export const THEMES: Theme[] = [
   {

@@ -10,8 +10,8 @@ import {
   type NodeChange, 
   type EdgeChange 
 } from 'reactflow';
-import { MapDocument, DocumentTypology, THEMES, NodeData } from './types';
-import { treeLayout } from './utils/layout';
+import { MapDocument, DocumentTypology, THEMES, NodeData, TreeNode } from './types';
+import { generateCanvasLayout } from './utils/layout';
 
 interface MapState {
   document: MapDocument;
@@ -19,35 +19,74 @@ interface MapState {
   historyIndex: number;
   
   // Actions
-  setTypology: (typology: DocumentTypology) => void;
+  initDocument: (typology: DocumentTypology) => void;
   setNodes: (nodes: Node<NodeData>[]) => void;
   setEdges: (edges: Edge[]) => void;
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
   updateNodeData: (nodeId: string, data: Partial<NodeData>) => void;
+  addChildNode: (parentId: string) => void;
+  deleteNode: (nodeId: string) => void;
   setTheme: (themeId: string) => void;
   undo: () => void;
   redo: () => void;
   saveToHistory: () => void;
 }
 
+const initialTreeRoot: TreeNode = {
+  id: 'root',
+  data: { label: 'Central Topic', isRoot: true },
+  children: [],
+};
+
 const initialDoc: MapDocument = {
   id: 'default-doc',
   name: 'Untitled Map',
   typology: DocumentTypology.MIND_MAP,
-  nodes: [
-    {
-      id: 'root',
-      type: 'input',
-      data: { label: 'Central Topic', isRoot: true },
-      position: { x: 0, y: 0 },
-    },
-  ],
-  edges: [],
+  rootNode: initialTreeRoot,
+  nodes: generateCanvasLayout(initialTreeRoot).nodes,
+  edges: generateCanvasLayout(initialTreeRoot).edges,
   theme: THEMES[0],
   boundaries: [],
 };
+
+// Helper: Recursively find and update a node
+function updateTreeData(node: TreeNode, nodeId: string, data: Partial<NodeData>): boolean {
+  if (node.id === nodeId) {
+    node.data = { ...node.data, ...data };
+    return true;
+  }
+  for (const child of node.children) {
+    if (updateTreeData(child, nodeId, data)) return true;
+  }
+  return false;
+}
+
+// Helper: Recursively add a child
+function addTreeChild(node: TreeNode, parentId: string, child: TreeNode): boolean {
+  if (node.id === parentId) {
+    node.children.push(child);
+    return true;
+  }
+  for (const c of node.children) {
+    if (addTreeChild(c, parentId, child)) return true;
+  }
+  return false;
+}
+
+// Helper: Recursively delete a node
+function deleteTreeNode(node: TreeNode, nodeId: string): boolean {
+  const index = node.children.findIndex(c => c.id === nodeId);
+  if (index !== -1) {
+    node.children.splice(index, 1);
+    return true;
+  }
+  for (const child of node.children) {
+    if (deleteTreeNode(child, nodeId)) return true;
+  }
+  return false;
+}
 
 export const useMapStore = create<MapState>()(
   persist(
@@ -70,20 +109,17 @@ export const useMapStore = create<MapState>()(
         });
       },
 
-      setTypology: (typology) => {
-        const { document } = get();
-        let newNodes = [...document.nodes];
-        let newEdges = [...document.edges];
-
-        // Apply reflow logic based on typology
-        if (typology === DocumentTypology.MIND_MAP || typology === DocumentTypology.ORG_CHART) {
-          const layouted = treeLayout(newNodes, newEdges, typology);
-          newNodes = layouted.nodes;
-          newEdges = layouted.edges;
-        }
-
-        set({ document: { ...document, typology, nodes: newNodes, edges: newEdges } });
-        get().saveToHistory();
+      initDocument: (typology) => {
+        set({
+          document: {
+             ...initialDoc,
+             typology,
+             nodes: typology === DocumentTypology.MIND_MAP ? generateCanvasLayout(initialTreeRoot).nodes : initialDoc.nodes,
+             edges: typology === DocumentTypology.MIND_MAP ? generateCanvasLayout(initialTreeRoot).edges : initialDoc.edges,
+          },
+          history: [initialDoc],
+          historyIndex: 0
+        });
       },
 
       setNodes: (nodes) => set((state) => ({ document: { ...state.document, nodes } })),
@@ -102,22 +138,58 @@ export const useMapStore = create<MapState>()(
       },
 
       onConnect: (connection) => {
+        // Disabled free-form connections since we enforce strict hierarchical tree layout
+      },
+
+      addChildNode: (parentId) => {
         const { document } = get();
-        const newEdges = addEdge(connection, document.edges);
-        set({ document: { ...document, edges: newEdges } });
-        get().saveToHistory();
+        // Ignore Add Child for Flowcharts 
+        if (document.typology !== DocumentTypology.MIND_MAP) return;
+
+        const newRoot = JSON.parse(JSON.stringify(document.rootNode)); // Deep copy
+        
+        const newNode: TreeNode = {
+          id: `node-${Date.now()}`,
+          data: { label: 'New Topic' },
+          children: []
+        };
+
+        if (addTreeChild(newRoot, parentId, newNode)) {
+          const { nodes, edges } = generateCanvasLayout(newRoot);
+          set({ document: { ...document, rootNode: newRoot, nodes, edges } });
+          get().saveToHistory();
+        }
+      },
+
+      deleteNode: (nodeId) => {
+        if (nodeId === 'root') return; // Cannot delete root
+        const { document } = get();
+        
+        // For Flowchart, we just remove it from flat array
+        if (document.typology !== DocumentTypology.MIND_MAP) {
+          set({ document: { ...document, nodes: document.nodes.filter(n => n.id !== nodeId) } });
+          get().saveToHistory();
+          return;
+        }
+
+        // For MindMap we use tree
+        const newRoot = JSON.parse(JSON.stringify(document.rootNode));
+        if (deleteTreeNode(newRoot, nodeId)) {
+          const { nodes, edges } = generateCanvasLayout(newRoot);
+          set({ document: { ...document, rootNode: newRoot, nodes, edges } });
+          get().saveToHistory();
+        }
       },
 
       updateNodeData: (nodeId, data) => {
         const { document } = get();
-        const newNodes = document.nodes.map((node) => {
-          if (node.id === nodeId) {
-            return { ...node, data: { ...node.data, ...data } };
-          }
-          return node;
-        });
-        set({ document: { ...document, nodes: newNodes } });
-        get().saveToHistory();
+        const newRoot = JSON.parse(JSON.stringify(document.rootNode));
+        
+        if (updateTreeData(newRoot, nodeId, data)) {
+          const { nodes, edges } = generateCanvasLayout(newRoot);
+          set({ document: { ...document, rootNode: newRoot, nodes, edges } });
+          get().saveToHistory();
+        }
       },
 
       setTheme: (themeId) => {
